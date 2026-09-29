@@ -23,8 +23,9 @@ export const DEFAULTS = {
   showPreview: true,
 
   // filter
-  minCutoff: 1.0,
+  minCutoff: 0.6,
   beta: 8,
+  depthCutoffScale: 0.4, // depth (z) uses minCutoff × this
   holdTime: 0.6,
   returnRate: 2.5,
   defaultEyeZMm: 600,
@@ -47,6 +48,9 @@ export const DEFAULTS = {
   grid: true, // grid on floor/ceiling/side walls when they aren't black
   backWall: 'grid', // 'grid' | 'plain' | 'image'
   backWallFit: 'cover', // 'cover' | 'stretch'
+  // Endless back wall: one image copy spans this many window-sizes before it mirror-repeats.
+  // ~3× covers everything visible from normal viewing positions.
+  backWallImageSize: 3,
   roomDepthMm: 400,
 
   // view

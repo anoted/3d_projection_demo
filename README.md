@@ -16,7 +16,7 @@ Pick a model under **Model → View** (or `[` / `]`). Every `.glb` placed under
 | `1` `2` `3` | Mouse / auto-orbit / webcam head tracking |
 | `C` | Calibrate physical size (bank card or display diagonal) |
 | `F` | Fullscreen (the most accurate mode: canvas = whole display) |
-| `D` / `H` / `G` | Debug view / HUD / settings panel |
+| `D` / `H` / `W` / `G` | Debug view / HUD / webcam view / settings panel |
 
 Changes apply live; **Settings → Save** stores them (one saved instance; the back-wall
 image goes to IndexedDB). **Revert to saved** / **Reset to defaults** switch back. Card

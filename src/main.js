@@ -74,6 +74,8 @@ function roomDims() {
   return { width: screenObj.width, height: screenObj.height, depth: settings.roomDepthMm / 1000 };
 }
 
+let cImageSize = null; // GUI controller, only meaningful for the endless back wall
+
 function applyLayout() {
   if (settings.autoSize) {
     settings.screenWidthMm = +(canvas.clientWidth * mmPerCssPx()).toFixed(1);
@@ -88,7 +90,9 @@ function applyLayout() {
     back: settings.backWall,
     image: backWallImage?.texture ?? null,
     imageFit: settings.backWallFit,
+    imageSize: settings.backWallImageSize,
   });
+  cImageSize?.enable(settings.blackWalls);
   stage.layout(dims, settings);
 
   // key light: above and in front of the opening, aimed at the middle of the floor
@@ -225,10 +229,10 @@ fCam.add(settings, 'webcamOffsetXMm', -400, 400, 1).name('Offset X (mm)');
 fCam.add(settings, 'webcamBezelMm', -100, 150, 1).name('Above top edge (mm)');
 fCam.add(settings, 'webcamOffsetZMm', -100, 100, 1).name('Offset Z (mm)');
 fCam.add(settings, 'webcamTiltDeg', -30, 30, 0.5).name('Tilt down (°)');
-fCam.add(settings, 'showPreview').name('Preview');
 
 const fFilter = gui.addFolder('Filter').close();
 fFilter.add(settings, 'minCutoff', 0.05, 10, 0.05).name('Min cutoff (Hz)');
+fFilter.add(settings, 'depthCutoffScale', 0.05, 1, 0.05).name('Depth cutoff ×');
 fFilter.add(settings, 'beta', 0, 60, 0.5).name('Speed coefficient β');
 fFilter.add(settings, 'holdTime', 0, 3, 0.05).name('Hold on loss (s)');
 fFilter.add(settings, 'returnRate', 0.2, 10, 0.1).name('Return speed');
@@ -264,11 +268,14 @@ fRoom.add(settings, 'backWall', { Grid: 'grid', Plain: 'plain', Image: 'image' }
 });
 fRoom.add({ chooseBackWallImage }, 'chooseBackWallImage').name('Choose back-wall image…');
 fRoom.add(settings, 'backWallFit', { 'Cover (crop)': 'cover', Stretch: 'stretch' }).name('Image fit').onChange(applyLayout);
+cImageSize = fRoom.add(settings, 'backWallImageSize', 1, 8, 0.1).name('Image size (× window)').onChange(applyLayout);
+cImageSize.enable(settings.blackWalls);
 fRoom.add(settings, 'roomDepthMm', 50, 1500, 5).name('Depth (mm)').onChange(applyLayout);
 
 const fView = gui.addFolder('View');
 fView.add(settings, 'debugView').name('Debug view (D)').onChange((v) => debugView.setEnabled(v));
 fView.add(settings, 'showHud').name('HUD (H)');
+fView.add(settings, 'showPreview').name('Webcam view (W)');
 fView.add({ toggleFullscreen }, 'toggleFullscreen').name('Fullscreen (F)');
 
 // Settings live-apply as you change them; only Save persists them.
@@ -344,6 +351,7 @@ window.addEventListener('keydown', (e) => {
   if (k === 'f') toggleFullscreen();
   else if (k === 'd') debugView.setEnabled((settings.debugView = !settings.debugView));
   else if (k === 'h') settings.showHud = !settings.showHud;
+  else if (k === 'w') settings.showPreview = !settings.showPreview;
   else if (k === 'g') gui.show(gui._hidden);
   else if (k === 'c') calibrate();
   else if (k === '[') stepModel(-1);
@@ -374,7 +382,7 @@ function updateHud(dt, near) {
     ['Near', settings.clampNear ? `clamped to glass (${cm(near)} cm)` : `${cm(near)} cm · pop-out allowed`],
     ['Model', `${stage.status}${loading}`],
   ].map(([k, v]) => `<div><b>${k}</b><span>${v}</span></div>`).join('')
-    + '<div class="keys">[ ] model · 1 2 3 tracker · C calibrate · F fullscreen · D debug · G panel</div>';
+    + '<div class="keys">[ ] model · 1 2 3 tracker · C calibrate · F fullscreen · D debug · W webcam · G panel</div>';
 }
 
 // ---------------------------------------------------------------- frame loop

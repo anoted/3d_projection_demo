@@ -4,15 +4,18 @@ import wasmLoaderUrl from '@mediapipe/tasks-vision/vision_wasm_internal.js?url';
 import wasmBinaryUrl from '@mediapipe/tasks-vision/vision_wasm_internal.wasm?url';
 
 const MODEL_URL = `${import.meta.env.BASE_URL}face_landmarker.task`;
-const IRIS_A = 468; // iris centre landmarks in the 478-point mesh
-const IRIS_B = 473;
+// Eye corners (canthi) in the 478-point mesh. Unlike the iris or eyelid points they
+// don't move when you blink or look around, so a still head gives a still eye.
+const EYE_A = [33, 133]; // outer, inner corner of one eye
+const EYE_B = [362, 263]; // inner, outer corner of the other
 const LOCK_RADIUS = 0.15; // normalised image distance to keep the same face
 const LOCK_PATIENCE = 12; // frames the locked face may be missing before re-acquiring
 const X_AXIS = new THREE.Vector3(1, 0, 0);
 
 /**
  * Webcam head tracker (MediaPipe Face Landmarker).
- * Eye = midpoint of the two iris centres; depth from interpupillary distance.
+ * Eye = midpoint of the two eye centres (each the middle of its corners);
+ * depth from their separation, which is close to the interpupillary distance.
  * Output in screen-local meters.
  */
 export class FaceTracker {
@@ -96,11 +99,13 @@ export class FaceTracker {
     const W = this.video.videoWidth, H = this.video.videoHeight;
     const res = this.landmarker.detectForVideo(this.video, performance.now());
     this.candidates = res.faceLandmarks.map((lm) => {
-      const a = lm[IRIS_A], b = lm[IRIS_B];
+      const a = midpoint(lm, EYE_A), b = midpoint(lm, EYE_B);
       return {
         u: (a.x + b.x) / 2, // normalised image coords
         v: (a.y + b.y) / 2,
-        ipdPx: Math.hypot((a.x - b.x) * W, (a.y - b.y) * H),
+        // z is on the same scale as x, so including it keeps the distance
+        // steady when the head turns instead of reading a turn as moving away.
+        ipdPx: Math.hypot((a.x - b.x) * W, (a.y - b.y) * H, (a.z - b.z) * W),
         a, b,
       };
     });
@@ -168,4 +173,9 @@ export class FaceTracker {
       }
     }
   }
+}
+
+function midpoint(lm, [i, j]) {
+  const p = lm[i], q = lm[j];
+  return { x: (p.x + q.x) / 2, y: (p.y + q.y) / 2, z: (p.z + q.z) / 2 };
 }

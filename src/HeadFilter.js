@@ -57,7 +57,9 @@ export class HeadFilter {
         this.lastSample = tracker.sampleId;
         this.lastSampleTime = this.time;
         for (let i = 0; i < 3; i++) {
-          this.eye.setComponent(i, this.filters[i].filter(tracker.eye.getComponent(i), sdt, s.minCutoff, s.beta));
+          // Depth comes from a ~100 px eye separation, so it is far noisier than x/y: smooth it harder.
+          const minCutoff = i === 2 ? s.minCutoff * s.depthCutoffScale : s.minCutoff;
+          this.eye.setComponent(i, this.filters[i].filter(tracker.eye.getComponent(i), sdt, minCutoff, s.beta));
         }
       }
     } else {

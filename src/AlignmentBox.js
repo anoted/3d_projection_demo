@@ -42,6 +42,7 @@ export class AlignmentBox extends THREE.Group {
    *   back: 'grid' | 'plain' | 'image',
    *   image: THREE.Texture | null,   owned by the caller, never disposed here
    *   imageFit: 'cover' | 'stretch',
+   *   imageSize: number,             endless wall only: one image copy spans this many window-sizes
    * }
    */
   update(width, height, depth, look) {
@@ -72,7 +73,8 @@ export class AlignmentBox extends THREE.Group {
       if (mode === 'image' && !look.image) mode = 'grid';
       if (mode === 'image') {
         mat.map = look.image;
-        fitImage(look.image, mesh.scale.x, mesh.scale.y, width, height, look.imageFit);
+        const k = extend ? look.imageSize : 1; // the normal room's wall is exactly one copy
+        fitImage(look.image, mesh.scale.x, mesh.scale.y, width * k, height * k, look.imageFit);
       } else if (mode === 'grid') {
         mat.map = isBack && extend ? this._tile() : this._grid(name, mesh.scale.x, mesh.scale.y);
       } else {
