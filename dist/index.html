@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Off-axis Window</title>
+    <link rel="icon" href="data:," />
+    <script type="module" crossorigin src="/assets/index-Bh1gXL-z.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-DmhMf6BN.css">
+  </head>
+  <body>
+    <canvas id="view"></canvas>
+    <div id="hud" aria-live="off"></div>
+    <pre id="fatal" hidden></pre>
+    <script>
+      // Surface any startup failure on the page instead of a silent blank screen.
+      function showFatal(msg) {
+        var el = document.getElementById('fatal');
+        el.hidden = false;
+        el.textContent += msg + '\n';
+        console.error(msg);
+      }
+      window.addEventListener('error', function (e) {
+        showFatal((e.error && e.error.stack) || e.message || ('Failed to load ' + (e.target && (e.target.src || e.target.href))));
+        if (e.target && e.target.tagName === 'SCRIPT') showFatal('If you use an ad/tracker blocker, try allowing localhost.');
+      }, true);
+      window.addEventListener('unhandledrejection', function (e) {
+        showFatal('Unhandled: ' + ((e.reason && e.reason.stack) || e.reason));
+      });
+    </script>
+  </body>
+</html>

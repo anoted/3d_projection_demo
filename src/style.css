@@ -1,0 +1,176 @@
+:root {
+  --bg: #0b0d12;
+  --panel: rgba(18, 21, 28, 0.86);
+  --line: rgba(255, 255, 255, 0.12);
+  --text: #e6e9ef;
+  --muted: #8a93a6;
+  --accent: #4cc9f0;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  font: 13px/1.4 system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+#view {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+}
+
+#hud {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  padding: 8px 10px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font: 12px/1.5 ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  pointer-events: none;
+  max-width: calc(100vw - 24px);
+}
+#hud div { display: flex; gap: 10px; white-space: pre; }
+#hud b { color: var(--muted); font-weight: 500; width: 56px; flex: none; }
+#hud .keys { color: var(--muted); margin-top: 4px; white-space: normal; }
+
+.debug-overlay {
+  position: fixed;
+  left: 16px;
+  bottom: 16px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  cursor: grab;
+  touch-action: none;
+}
+.debug-overlay:active { cursor: grabbing; }
+.debug-overlay span {
+  position: absolute;
+  top: 6px;
+  left: 8px;
+  color: var(--muted);
+  font-size: 11px;
+  pointer-events: none;
+}
+
+.webcam-preview {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  width: 240px;
+  height: auto;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: #000;
+}
+
+/* calibration dialog */
+.calib {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(5, 6, 9, 0.8);
+  z-index: 10;
+  padding: 16px;
+}
+.calib-panel {
+  width: min(960px, 100%);
+  max-height: 100%;
+  overflow: auto;
+  background: #12151c;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 20px 24px;
+}
+.calib h2 { margin: 0 0 6px; font-size: 18px; }
+.calib p { margin: 0 0 12px; color: var(--muted); }
+.calib .hint { font-size: 12px; margin-top: 8px; }
+.card-area {
+  min-height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 12px 0;
+}
+.card {
+  position: relative;
+  flex: none;
+  border: 2px solid var(--accent);
+  border-radius: 3.18mm;
+  background: linear-gradient(135deg, #1d3557, #274c77);
+}
+.card-chip {
+  position: absolute;
+  left: 12%;
+  top: 36%;
+  width: 14%;
+  height: 20%;
+  border-radius: 4px;
+  background: #c9a227;
+  opacity: 0.8;
+}
+.card-handle {
+  position: absolute;
+  right: -10px;
+  top: 50%;
+  width: 20px;
+  height: 40px;
+  margin-top: -20px;
+  border-radius: 4px;
+  background: var(--accent);
+  cursor: ew-resize;
+  touch-action: none;
+}
+.calib-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.calib-row input[type='range'] { flex: 1; min-width: 160px; }
+.calib-row output { font: 12px ui-monospace, Consolas, monospace; color: var(--muted); min-width: 100px; }
+.calib details { margin-top: 14px; }
+.calib summary { cursor: pointer; color: var(--muted); margin-bottom: 8px; }
+.calib input[type='number'] {
+  width: 80px;
+  background: #0b0d12;
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 4px 6px;
+}
+.calib button {
+  background: #1c212b;
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font: inherit;
+}
+.calib button:hover { border-color: var(--accent); }
+.calib button.primary { background: var(--accent); color: #06131a; border-color: var(--accent); }
+.calib-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+
+#fatal {
+  position: fixed;
+  inset: auto 16px 16px 16px;
+  max-height: 50vh;
+  overflow: auto;
+  margin: 0;
+  padding: 12px 14px;
+  background: #2a0f14;
+  border: 1px solid #ef476f;
+  border-radius: 6px;
+  color: #ffd6de;
+  font: 12px/1.5 ui-monospace, Consolas, monospace;
+  white-space: pre-wrap;
+  z-index: 20;
+}

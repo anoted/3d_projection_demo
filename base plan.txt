@@ -1,0 +1,91 @@
+Here's a plan for building the off-axis projection effect in Three.js. The article's approach is Kooima's "Generalized Perspective Projection," applied in Unity. Three.js makes it simpler, because the camera matrices are easy to set directly.
+
+## The core idea
+
+Treat the monitor as a window into a 3D box. On every frame you know three things:
+
+- where the physical screen is (a rectangle in world space)
+- where the viewer's eye is
+- a near and far clip distance
+
+From these you build an asymmetric frustum. Its apex is at the eye and its sides pass through the four screen corners. The camera always faces straight into the screen plane, never toward the content. Only the frustum shifts, and that shift produces the skew that looks correct from the viewer's position.
+
+**Use real units.** Make 1 world unit equal 1 meter. The virtual screen should match the physical display's measured width and height, and the eye position should also be in meters. Everything else follows from that.
+
+## Architecture
+
+| Module | Responsibility |
+|---|---|
+| `OffAxisScreen` | An `Object3D` at the display's center, with +Z pointing toward the viewer. Stores `width`/`height` in meters and draws a debug outline and normal line. Never scale this object; set the size through its properties instead. |
+| `updateOffAxisCamera()` | Takes the screen, eye position, near and far values, and writes the camera's world transform and projection matrix. |
+| `trackers/` | A common interface `{ isTracking, eye: Vector3 }`, in screen-local meters. Implementations: `MouseTracker`, `AutoTracker` (a sine-wave orbit, like the article's), and `FaceTracker` (webcam). |
+| `HeadFilter` | Smooths the tracker output, handles tracking loss, and eases back to a default eye position. |
+| `AlignmentBox` | An open box with a grid texture behind the screen, used for calibration. |
+| `DebugView` | A second viewport showing a third-person view of the screen, the eye, and a `CameraHelper` frustum. |
+
+## The camera math in Three.js
+
+```js
+const eyeL = new THREE.Vector3();
+
+export function updateOffAxisCamera(camera, screen, eyeWorld, near = 0.01, far = 100) {
+  screen.updateMatrixWorld();
+  eyeL.copy(eyeWorld); screen.worldToLocal(eyeL);      // eye in screen space
+  const d = Math.max(eyeL.z, 1e-4);                    // eye → plane distance
+  const k = near / d, { width: w, height: h } = screen;
+
+  const l = (-w/2 - eyeL.x) * k, r = (w/2 - eyeL.x) * k;
+  const b = (-h/2 - eyeL.y) * k, t = (h/2 - eyeL.y) * k;
+
+  camera.position.copy(eyeWorld);
+  screen.getWorldQuaternion(camera.quaternion);        // face perpendicular to screen
+  camera.updateMatrixWorld();
+
+  camera.projectionMatrix.makePerspective(l, r, t, b, near, far);
+  camera.projectionMatrixInverse.copy(camera.projectionMatrix).invert();
+}
+```
+
+The screen's local frame is axis-aligned, so Kooima's dot products reduce to simple subtraction. Copying the screen's rotation to the camera replaces his separate `M * R * T` view matrix.
+
+Rules that go with this:
+
+- **Never call `camera.updateProjectionMatrix()`.** It overwrites the custom frustum. On window resize, call `renderer.setSize()` and update the screen dimensions, then let the next frame recompute.
+- **Keep `projectionMatrixInverse` updated.** Raycasting, `CameraHelper`, SSAO, and other depth-reconstruction passes all read it.
+- **Keep the camera at the scene root**, or convert the eye position into the parent's space before assigning it.
+- **Choose the near plane based on the content.** Setting `near = d` matches the article's "clamp near plane" option and clips anything in front of the glass. A small fixed near value allows pop-out objects, but those only read correctly in stereo.
+
+## Build milestones
+
+**1. Proof of the math.** Build a static room behind the screen plane: a grid floor and walls, and some objects at different depths. Drive the eye from the mouse (x/y) and the scroll wheel (z). Success means the room's back corners stay pinned to the screen corners as the eye moves.
+
+**2. Calibration tools.** Add the `AlignmentBox`: five `PlaneGeometry` faces with a `CanvasTexture` grid that has a white border, and a configurable depth. Add the split-screen `DebugView`. Add a settings panel (for example lil-gui) for screen width and height in millimeters, webcam offset, near value, and filter strength.
+
+**3. Physical sizing.** Browsers can't report physical DPI reliably, so add a calibration step. One option is to have the user resize an on-screen rectangle until it matches a credit card (85.6 × 54 mm). In fullscreen, screen size = pixels × mm-per-pixel. In a window, use the canvas's physical size. Offsetting the screen rectangle by the window's position on the display is an optional refinement.
+
+**4. Head tracking.** Use the MediaPipe Face Landmarker (`@mediapipe/tasks-vision`, WASM, runs in the browser) with `getUserMedia`:
+
+- Take the eye midpoint from the two iris-center landmarks.
+- Estimate depth from interpupillary distance: `z = f · 0.063 / ipd_px`, where `f = (videoW/2) / tan(hfov/2)`. Assume a hfov of about 60° and make it tunable.
+- Back-project to get x and y, then mirror x.
+- Add the webcam's offset from the screen center, typically top-center: `y = h/2 + bezel`.
+
+**5. Robustness.** This matches the article's "room for improvement" list:
+
+- Smooth with a One-Euro filter, which avoids jitter at rest without adding lag during fast motion.
+- On tracking loss, hold the last position briefly, then ease back to a default on-axis eye.
+- With several faces, lock onto the largest or closest one and keep that choice until it's lost.
+
+**6. Content and polish.** Build scenes with strong depth cues: objects at several depths, visible walls or a floor, and optional shadows. Shadows work unchanged because shadow cameras are independent of the view camera.
+
+## Gotchas specific to Three.js
+
+- **Skyboxes and `scene.background` sit at infinity**, so they show no parallax and weaken the effect. The article gives the same advice: use real geometry for backgrounds.
+- **Features that jitter or offset the projection**, such as TAA or `setViewOffset`, call `updateProjectionMatrix()` internally and will break the frustum. Avoid them, or reapply your matrix after they run.
+- **Frustum culling works automatically**, because the renderer derives the frustum from `projectionMatrix × matrixWorldInverse` each frame.
+- **Monocular tracking only works for one eye position.** The illusion is strongest for a single viewer about 50–80 cm away, possibly with one eye closed. For stereo, run the function twice with eye positions ±32 mm apart and render with `StereoEffect` or anaglyph.
+
+A good first deliverable is milestones 1 and 2 as a single page: mouse-driven eye, alignment box, and a debug view. That validates the math before any webcam work.
+
+Sources:
+- [Off-axis projection in Unity — Michel de Brisis, TRY Creative Tech](https://medium.com/try-creative-tech/off-axis-projection-in-unity-1572d826541e)
